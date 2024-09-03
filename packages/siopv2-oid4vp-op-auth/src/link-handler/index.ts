@@ -1,8 +1,9 @@
-import { ManagedIdentifierOpts } from '@sphereon/ssi-sdk-ext.identifier-resolution'
+import { ManagedIdentifierOptsOrResult } from '@sphereon/ssi-sdk-ext.identifier-resolution'
+import { contextHasPlugin } from '@sphereon/ssi-sdk.agent-config'
 import { LinkHandlerAdapter } from '@sphereon/ssi-sdk.core'
 import { IMachineStatePersistence, interpreterStartOrResume, SerializableState } from '@sphereon/ssi-sdk.xstate-machine-persistence'
-import { IAgentContext } from '@veramo/core'
 import { Loggers } from '@sphereon/ssi-types'
+import { IAgentContext } from '@veramo/core'
 import { GetMachineArgs, IDidAuthSiopOpAuthenticator, LOGGER_NAMESPACE, Siopv2MachineInterpreter, Siopv2MachineState } from '../types'
 
 const logger = Loggers.DEFAULT.options(LOGGER_NAMESPACE, {}).get(LOGGER_NAMESPACE)
@@ -13,14 +14,14 @@ export class Siopv2OID4VPLinkHandler extends LinkHandlerAdapter {
     | ((oid4vciMachine: Siopv2MachineInterpreter, state: Siopv2MachineState, navigation?: any) => Promise<void>)
     | undefined
   private readonly noStateMachinePersistence: boolean
-  private readonly idOpts?: ManagedIdentifierOpts
+  private readonly idOpts?: ManagedIdentifierOptsOrResult
 
   constructor(
     args: Pick<GetMachineArgs, 'stateNavigationListener'> & {
       protocols?: Array<string | RegExp>
       context: IAgentContext<IDidAuthSiopOpAuthenticator & IMachineStatePersistence>
       noStateMachinePersistence?: boolean
-      idOpts?: ManagedIdentifierOpts
+      idOpts?: ManagedIdentifierOptsOrResult
     },
   ) {
     super({ ...args, id: 'Siopv2' })
@@ -34,7 +35,7 @@ export class Siopv2OID4VPLinkHandler extends LinkHandlerAdapter {
     url: string | URL,
     opts?: {
       machineState?: SerializableState
-      idOpts?: ManagedIdentifierOpts
+      idOpts?: ManagedIdentifierOptsOrResult
     },
   ): Promise<void> {
     logger.debug(`handling SIOP link: ${url}`)
@@ -46,8 +47,7 @@ export class Siopv2OID4VPLinkHandler extends LinkHandlerAdapter {
     })
 
     const interpreter = siopv2Machine.interpreter
-    //FIXME we need a better way to check if the state persistence plugin is available in the agent
-    if (!this.noStateMachinePersistence && !opts?.machineState && this.context.agent.availableMethods().includes('machineStatesFindActive')) {
+    if (!this.noStateMachinePersistence && !opts?.machineState && contextHasPlugin(this.context, 'machineStatesFindActive')) {
       const init = await interpreterStartOrResume({
         interpreter,
         context: this.context,

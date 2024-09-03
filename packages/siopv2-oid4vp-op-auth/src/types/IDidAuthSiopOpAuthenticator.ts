@@ -1,23 +1,24 @@
 import {
-  CheckLinkedDomain,
   PresentationDefinitionWithLocation,
   PresentationSignCallback,
-  ResolveOpts,
   ResponseMode,
   SupportedVersion,
   URI,
   VerifiablePresentationTypeFormat,
   VerifiedAuthorizationRequest,
+  VerifyJwtCallback,
   VPTokenLocation,
 } from '@sphereon/did-auth-siop'
+import { CheckLinkedDomain, ResolveOpts } from '@sphereon/did-auth-siop-adapter'
 import { DIDDocument } from '@sphereon/did-uni-client'
 import { VerifiablePresentationResult } from '@sphereon/pex'
-import { IIdentifierResolution, ManagedIdentifierOpts } from '@sphereon/ssi-sdk-ext.identifier-resolution'
-import { ICredentialStore } from '@sphereon/ssi-sdk.credential-store'
+import { IIdentifierResolution, ManagedIdentifierOptsOrResult } from '@sphereon/ssi-sdk-ext.identifier-resolution'
+import { IJwtService } from '@sphereon/ssi-sdk-ext.jwt-service'
+import { ICredentialStore, UniqueDigitalCredential } from '@sphereon/ssi-sdk.credential-store'
 import { Party } from '@sphereon/ssi-sdk.data-store'
 import { IPDManager } from '@sphereon/ssi-sdk.pd-manager'
 import { ISDJwtPlugin } from '@sphereon/ssi-sdk.sd-jwt'
-import { Hasher, PresentationSubmission, W3CVerifiableCredential, W3CVerifiablePresentation } from '@sphereon/ssi-types'
+import { Hasher, OriginalVerifiableCredential, PresentationSubmission, W3CVerifiablePresentation } from '@sphereon/ssi-types'
 import { VerifyCallback } from '@sphereon/wellknown-dids-client'
 import {
   IAgentContext,
@@ -79,7 +80,7 @@ export interface IOpSessionArgs {
   sessionId?: string
   requestJwtOrUri: string | URI
   providedPresentationDefinitions?: Array<PresentationDefinitionWithLocation>
-  identifierOptions?: ManagedIdentifierOpts
+  identifierOptions?: ManagedIdentifierOptsOrResult
   context: IRequiredContext
   op?: IOPOptions
 }
@@ -116,7 +117,7 @@ export interface IRemoveCustomApprovalForSiopArgs {
 }
 
 export interface IOpsSendSiopAuthorizationResponseArgs {
-  responseSignerOpts: ManagedIdentifierOpts
+  responseSignerOpts: ManagedIdentifierOptsOrResult
   // verifiedAuthorizationRequest: VerifiedAuthorizationRequest
   presentationSubmission?: PresentationSubmission
   verifiablePresentations?: W3CVerifiablePresentation[]
@@ -136,7 +137,8 @@ export type IRequiredContext = IAgentContext<
     ICredentialVerifier &
     ICredentialStore &
     IPDManager &
-    ISDJwtPlugin
+    ISDJwtPlugin &
+    IJwtService
 >
 
 export interface IOPOptions {
@@ -148,6 +150,7 @@ export interface IOPOptions {
   eventEmitter?: EventEmitter
   supportedDIDMethods?: string[]
 
+  verifyJwtCallback?: VerifyJwtCallback
   wellknownDIDVerifyCallback?: VerifyCallback
 
   presentationSignCallback?: PresentationSignCallback
@@ -164,29 +167,29 @@ export interface IIdentifierOpts {
 
 export interface VerifiableCredentialsWithDefinition {
   definition: PresentationDefinitionWithLocation
-  credentials: W3CVerifiableCredential[]
+  credentials: (UniqueDigitalCredential | OriginalVerifiableCredential)[]
 }
 
 export interface VerifiablePresentationWithDefinition extends VerifiablePresentationResult {
   definition: PresentationDefinitionWithLocation
-  verifiableCredentials: W3CVerifiableCredential[]
-  idOpts: ManagedIdentifierOpts
+  verifiableCredentials: OriginalVerifiableCredential[]
+  idOpts: ManagedIdentifierOptsOrResult
 }
 
 export interface IOpSessionGetOID4VPArgs {
-  allDIDs?: string[]
+  allIdentifiers?: string[]
   hasher?: Hasher
 }
 
 export interface IOID4VPArgs {
   session: OpSession
-  allDIDs?: string[]
+  allIdentifiers?: string[]
   hasher?: Hasher
 }
 
 export interface IGetPresentationExchangeArgs {
-  verifiableCredentials: W3CVerifiableCredential[]
-  allDIDs?: string[]
+  verifiableCredentials: OriginalVerifiableCredential[]
+  allIdentifiers?: string[]
   hasher?: Hasher
 }
 

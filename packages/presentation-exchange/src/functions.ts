@@ -4,7 +4,7 @@ import {
   isManagedIdentifierDidOpts,
   isManagedIdentifierDidResult,
   isManagedIdentifierX5cResult,
-  ManagedIdentifierOpts,
+  ManagedIdentifierOptsOrResult,
 } from '@sphereon/ssi-sdk-ext.identifier-resolution'
 import {
   CredentialMapper,
@@ -18,7 +18,7 @@ import { IPEXPresentationSignCallback, IRequiredContext } from './types/IPresent
 
 export async function createPEXPresentationSignCallback(
   args: {
-    idOpts: ManagedIdentifierOpts
+    idOpts: ManagedIdentifierOptsOrResult
     fetchRemoteContexts?: boolean
     skipDidResolution?: boolean
     format?: Format | ProofFormat

@@ -1,4 +1,5 @@
-import { JWK, toJwk } from '@sphereon/ssi-sdk-ext.key-utils'
+import { toJwk } from '@sphereon/ssi-sdk-ext.key-utils'
+import { JWK } from '@sphereon/ssi-types'
 import { IIdentifier, IKey } from '@veramo/core'
 import { asArray } from '@veramo/utils'
 import { JWKS_HOSTING_DID_KEYS_PATH } from './environment'

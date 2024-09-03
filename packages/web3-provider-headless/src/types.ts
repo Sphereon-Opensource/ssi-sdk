@@ -1,5 +1,5 @@
 import { TransactionRequest } from '@ethersproject/abstract-provider'
-import { TypedDataDomain, TypedDataField } from '@ethersproject/abstract-signer/src.ts'
+import { TypedDataDomain, TypedDataField } from '@ethersproject/abstract-signer'
 import { IAgentContext, IKeyManager } from '@veramo/core'
 
 export type rpcMethods = 'eth_call' | 'eth_getBalance'

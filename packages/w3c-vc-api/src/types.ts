@@ -9,7 +9,7 @@ import {
   IKeyManager,
   IResolver,
 } from '@veramo/core'
-import { ProofFormat } from '@veramo/core/src/types/ICredentialIssuer'
+import { ProofFormat } from '@veramo/core'
 import { ICredentialStore } from '@sphereon/ssi-sdk.credential-store'
 
 export type IRequiredPlugins = IDataStoreORM &

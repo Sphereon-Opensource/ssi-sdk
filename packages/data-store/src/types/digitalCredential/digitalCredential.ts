@@ -1,21 +1,28 @@
-export type NonPersistedDigitalCredential = Omit<DigitalCredential, 'id'>
+export type NonPersistedDigitalCredential = Omit<DigitalCredential, 'id' | 'regulationType'> & { regulationType?: RegulationType }
 
 export type DigitalCredential = {
   id: string
+  parentId?: string
   documentType: DocumentType
   documentFormat: CredentialDocumentFormat
   credentialRole: CredentialRole
+  regulationType: RegulationType
   rawDocument: string
   uniformDocument: string
   credentialId?: string
   hash: string
+  kmsKeyRef: string
+  identifierMethod: string
   issuerCorrelationType: CredentialCorrelationType
   subjectCorrelationType?: CredentialCorrelationType
+  rpCorrelationType?: CredentialCorrelationType
   issuerCorrelationId: string
   subjectCorrelationId?: string
+  rpCorrelationId?: string
   verifiedState?: CredentialStateType
   tenantId?: string
   createdAt: Date
+  presentedAt?: Date
   lastUpdatedAt: Date
   validUntil?: Date
   validFrom?: Date
@@ -30,11 +37,18 @@ export enum DocumentType {
   C = 'C',
 }
 
+export enum RegulationType {
+  PID = 'PID',
+  QEAA = 'QEAA',
+  EAA = 'EAA',
+  NON_REGULATED = 'NON_REGULATED',
+}
+
 export enum CredentialDocumentFormat {
   JSON_LD = 'JSON_LD',
   JWT = 'JWT',
   SD_JWT = 'SD_JWT',
-  MDOC = 'MDOC',
+  MSO_MDOC = 'MSO_MDOC',
 }
 
 export namespace CredentialDocumentFormat {
@@ -45,7 +59,7 @@ export namespace CredentialDocumentFormat {
     } else if (format.includes('ldp')) {
       return CredentialDocumentFormat.JSON_LD
     } else if (format.includes('mso') || credentialFormat.includes('mdoc')) {
-      return CredentialDocumentFormat.MDOC
+      return CredentialDocumentFormat.MSO_MDOC
     } else if (format.includes('jwt_')) {
       return CredentialDocumentFormat.JWT
     } else {
@@ -57,7 +71,7 @@ export namespace CredentialDocumentFormat {
     switch (documentFormat) {
       case CredentialDocumentFormat.SD_JWT:
         return 'vc+sd-jwt'
-      case CredentialDocumentFormat.MDOC:
+      case CredentialDocumentFormat.MSO_MDOC:
         return 'mso_mdoc'
       case CredentialDocumentFormat.JSON_LD:
         return documentType === DocumentType.C || documentType === DocumentType.VC ? 'ldp_vc' : 'ldp_vp'
@@ -69,7 +83,8 @@ export namespace CredentialDocumentFormat {
 
 export enum CredentialCorrelationType {
   DID = 'DID',
-  X509_CN = 'X509_CN',
+  X509_SAN = 'X509_SAN',
+  KID = 'KID',
   URL = 'URL',
 }
 

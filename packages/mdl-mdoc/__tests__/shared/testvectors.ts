@@ -1,3 +1,5 @@
+import { PresentationDefinitionV2 } from '@sphereon/pex-models'
+
 export const sphereonCA =
   '-----BEGIN CERTIFICATE-----\n' +
   'MIICCDCCAa6gAwIBAgITAPMgqwtYzWPBXaobHhxG9iSydTAKBggqhkjOPQQDAjBa\n' +
@@ -90,3 +92,50 @@ export const funkeTestIssuer =
   '-----BEGIN CERTIFICATE-----\n' +
   'MIICdDCCAhugAwIBAgIBAjAKBggqhkjOPQQDAjCBiDELMAkGA1UEBhMCREUxDzANBgNVBAcMBkJlcmxpbjEdMBsGA1UECgwUQnVuZGVzZHJ1Y2tlcmVpIEdtYkgxETAPBgNVBAsMCFQgQ1MgSURFMTYwNAYDVQQDDC1TUFJJTkQgRnVua2UgRVVESSBXYWxsZXQgUHJvdG90eXBlIElzc3VpbmcgQ0EwHhcNMjQwNTMxMDgxMzE3WhcNMjUwNzA1MDgxMzE3WjBsMQswCQYDVQQGEwJERTEdMBsGA1UECgwUQnVuZGVzZHJ1Y2tlcmVpIEdtYkgxCjAIBgNVBAsMAUkxMjAwBgNVBAMMKVNQUklORCBGdW5rZSBFVURJIFdhbGxldCBQcm90b3R5cGUgSXNzdWVyMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEOFBq4YMKg4w5fTifsytwBuJf/7E7VhRPXiNm52S3q1ETIgBdXyDK3kVxGxgeHPivLP3uuMvS6iDEc7qMxmvduKOBkDCBjTAdBgNVHQ4EFgQUiPhCkLErDXPLW2/J0WVeghyw+mIwDAYDVR0TAQH/BAIwADAOBgNVHQ8BAf8EBAMCB4AwLQYDVR0RBCYwJIIiZGVtby5waWQtaXNzdWVyLmJ1bmRlc2RydWNrZXJlaS5kZTAfBgNVHSMEGDAWgBTUVhjAiTjoDliEGMl2Yr+ru8WQvjAKBggqhkjOPQQDAgNHADBEAiAbf5TzkcQzhfWoIoyi1VN7d8I9BsFKm1MWluRph2byGQIgKYkdrNf2xXPjVSbjW/U/5S5vAEC5XxcOanusOBroBbU=\n' +
   '-----END CERTIFICATE-----'
+
+export const funkePdTestVector = {
+  id: 'PID-sample-req',
+  input_descriptors: [
+    {
+      id: 'eu.europa.ec.eudi.pid.1',
+      format: {
+        mso_mdoc: {
+          alg: ['ES256', 'ES384', 'ES512', 'EdDSA'],
+        },
+      },
+      constraints: {
+        fields: [
+          {
+            path: ["$['eu.europa.ec.eudi.pid.1']['resident_country']"],
+            intent_to_retain: false,
+          },
+          {
+            path: ["$['eu.europa.ec.eudi.pid.1']['age_over_12']"],
+            intent_to_retain: false,
+          },
+          {
+            path: ["$['eu.europa.ec.eudi.pid.1']['given_name']"],
+            intent_to_retain: true,
+          },
+          {
+            path: ["$['eu.europa.ec.eudi.pid.1']['nationality']"],
+            intent_to_retain: true,
+          },
+          {
+            path: ["$['eu.europa.ec.eudi.pid.1']['issuing_country']"],
+            intent_to_retain: false,
+          },
+          {
+            path: ["$['eu.europa.ec.eudi.pid.1']['issuance_date']"],
+            intent_to_retain: false,
+          },
+          {
+            path: ["$['eu.europa.ec.eudi.pid.1']['birth_date']"],
+            intent_to_retain: false,
+          },
+        ],
+        limit_disclosure: 'required',
+      },
+    },
+  ],
+} satisfies PresentationDefinitionV2

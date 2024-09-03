@@ -68,7 +68,7 @@ export class OID4VCIIssuer implements IAgentPlugin {
         credentialOfferSessions: issuer.credentialOfferSessions,
         expirationDuration: accessTokenArgs.expirationDuration,
       })
-      const accessTokenIssuer = instance.issuerOptions.idOpts?.issuer ?? instance.issuerOptions.didOpts?.idOpts.identifier.toString() // later part is legacy
+      const accessTokenIssuer = instance.issuerOptions.idOpts?.issuer ?? instance.issuerOptions.didOpts?.idOpts.identifier.toString() // last part is legacy
       if (!accessTokenIssuer) {
         return Promise.reject(Error(`Could not determine access token issuer`))
       }

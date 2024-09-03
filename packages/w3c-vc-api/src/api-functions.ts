@@ -1,6 +1,6 @@
 import { checkAuth, ISingleEndpointOpts, sendErrorResponse } from '@sphereon/ssi-express-support'
 import { CredentialPayload } from '@veramo/core'
-import { ProofFormat } from '@veramo/core/src/types/ICredentialIssuer'
+import { ProofFormat } from '@veramo/core'
 import { W3CVerifiableCredential } from '@veramo/core/src/types/vc-data-model'
 import { Request, Response, Router } from 'express'
 import { v4 } from 'uuid'

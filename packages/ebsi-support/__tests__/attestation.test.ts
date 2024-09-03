@@ -8,7 +8,7 @@ import { CredentialRole } from '@sphereon/ssi-sdk.data-store'
 import { IOID4VCIHolder } from '@sphereon/ssi-sdk.oid4vci-holder'
 import { IPresentationExchange } from '@sphereon/ssi-sdk.presentation-exchange'
 import { PublicKeyHosting } from '@sphereon/ssi-sdk.public-key-hosting'
-import { jwksURIFromIdentifier } from '@sphereon/ssi-sdk.public-key-hosting/dist/functions'
+import { jwksURIFromIdentifier } from '@sphereon/ssi-sdk.public-key-hosting'
 import { IDidAuthSiopOpAuthenticator } from '@sphereon/ssi-sdk.siopv2-oid4vp-op-auth'
 import { IDIDManager, IIdentifier, IKeyManager, IResolver, MinimalImportableKey, TAgent } from '@veramo/core'
 

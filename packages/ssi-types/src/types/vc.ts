@@ -1,3 +1,11 @@
+import {
+  MdocDeviceResponse,
+  MdocDocument,
+  MdocOid4vpIssuerSigned,
+  MdocOid4vpMdocVpToken,
+  WrappedMdocCredential,
+  WrappedMdocPresentation,
+} from './mso_mdoc'
 import { SdJwtDecodedVerifiableCredential, WrappedSdJwtVerifiableCredential, WrappedSdJwtVerifiablePresentation } from './sd-jwt-vc'
 import {
   JwtDecodedVerifiableCredential,
@@ -8,9 +16,9 @@ import {
   WrappedW3CVerifiablePresentation,
 } from './w3c-vc'
 
-export type WrappedVerifiableCredential = WrappedW3CVerifiableCredential | WrappedSdJwtVerifiableCredential
+export type WrappedVerifiableCredential = WrappedW3CVerifiableCredential | WrappedSdJwtVerifiableCredential | WrappedMdocCredential
 
-export type WrappedVerifiablePresentation = WrappedW3CVerifiablePresentation | WrappedSdJwtVerifiablePresentation
+export type WrappedVerifiablePresentation = WrappedW3CVerifiablePresentation | WrappedSdJwtVerifiablePresentation | WrappedMdocPresentation
 
 export enum OriginalType {
   // W3C
@@ -21,6 +29,10 @@ export enum OriginalType {
   // SD-JWT
   SD_JWT_VC_ENCODED = 'sd-jwt-vc-encoded',
   SD_JWT_VC_DECODED = 'sd-jwt-vc-decoded',
+
+  // MSO MDOCS
+  MSO_MDOC_ENCODED = 'mso_mdoc-encoded',
+  MSO_MDOC_DECODED = 'mso_mdoc-decoded',
 }
 
 export type CredentialFormat =
@@ -32,6 +44,7 @@ export type CredentialFormat =
   // Remaining
   | 'jwt'
   | 'ldp'
+  | 'mso_mdoc'
   | string
 
 export type PresentationFormat =
@@ -43,12 +56,23 @@ export type PresentationFormat =
   // Remaining
   | 'jwt'
   | 'ldp'
+  | 'mso_mdoc'
   | string
 
 export type ClaimFormat = CredentialFormat | PresentationFormat
 
-export type OriginalVerifiableCredential = W3CVerifiableCredential | JwtDecodedVerifiableCredential | SdJwtDecodedVerifiableCredential
-export type OriginalVerifiablePresentation = W3CVerifiablePresentation | JwtDecodedVerifiablePresentation | SdJwtDecodedVerifiableCredential
+export type OriginalVerifiableCredential =
+  | W3CVerifiableCredential
+  | JwtDecodedVerifiableCredential
+  | SdJwtDecodedVerifiableCredential
+  | MdocOid4vpIssuerSigned
+  | MdocDocument
+export type OriginalVerifiablePresentation =
+  | W3CVerifiablePresentation
+  | JwtDecodedVerifiablePresentation
+  | SdJwtDecodedVerifiableCredential
+  | MdocOid4vpMdocVpToken
+  | MdocDeviceResponse
 export type Original = OriginalVerifiablePresentation | OriginalVerifiableCredential
 
 export const enum DocumentFormat {
@@ -59,4 +83,5 @@ export const enum DocumentFormat {
   SD_JWT_VC,
   // Remaining
   EIP712,
+  MSO_MDOC,
 }

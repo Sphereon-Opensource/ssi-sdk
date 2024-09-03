@@ -1,6 +1,6 @@
 import { CredentialsSupportedDisplay } from '@sphereon/oid4vci-common'
 import { IBasicCredentialLocaleBranding, IBasicIssuerLocaleBranding } from '@sphereon/ssi-sdk.data-store'
-import { MetadataDisplay } from '@sphereon/oid4vci-common/lib/types/Generic.types'
+import { MetadataDisplay } from '@sphereon/oid4vci-common'
 
 // FIXME should we not move this to the branding plugin?
 export const credentialLocaleBrandingFrom = async (credentialDisplay: CredentialsSupportedDisplay): Promise<IBasicCredentialLocaleBranding> => {

@@ -5,6 +5,7 @@ import { AuthorizationResponseStateWithVerifiedData, VerifiedDataMode } from '@s
 import { Request, Response, Router } from 'express'
 import uuid from 'short-uuid'
 import { ICreateAuthRequestWebappEndpointOpts, IRequiredContext } from './types'
+import crypto from 'crypto'
 
 export function createAuthRequestWebappEndpoint(router: Router, context: IRequiredContext, opts?: ICreateAuthRequestWebappEndpointOpts) {
   if (opts?.enabled === false) {
@@ -45,6 +46,12 @@ export function createAuthRequestWebappEndpoint(router: Router, context: IRequir
       return sendErrorResponse(response, 500, 'Could not create an authorization request URI', error)
     }
   })
+}
+
+export const generateDigest = (data: string, algorithm: string): Uint8Array => {
+  // FIXME Funke
+  // @ts-ignore
+  return new Uint8Array(crypto.createHash('sha256').update(data).digest())
 }
 
 export function authStatusWebappEndpoint(router: Router, context: IRequiredContext, opts?: ISingleEndpointOpts) {
@@ -105,7 +112,7 @@ export function authStatusWebappEndpoint(router: Router, context: IRequiredConte
         definitionId,
         lastUpdated: overallState.lastUpdated,
         ...(responseState && responseState.status === AuthorizationResponseStateStatus.VERIFIED
-          ? { payload: await responseState.response.mergedPayloads(), verifiedData: responseState.verifiedData }
+          ? { payload: await responseState.response.mergedPayloads({ hasher: generateDigest }), verifiedData: responseState.verifiedData }
           : {}),
       }
       console.log(`Will send auth status: ${JSON.stringify(statusBody)}`)

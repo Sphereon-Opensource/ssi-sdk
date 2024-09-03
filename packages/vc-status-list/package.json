@@ -10,8 +10,8 @@
     "build:clean": "tsc --build --clean && tsc --build"
   },
   "dependencies": {
-    "@sphereon/ssi-sdk-ext.did-utils": "0.24.1-next.96",
-    "@sphereon/ssi-sdk-ext.identifier-resolution": "0.24.1-next.96",
+    "@sphereon/ssi-sdk-ext.did-utils": "0.24.1-next.110",
+    "@sphereon/ssi-sdk-ext.identifier-resolution": "0.24.1-next.110",
     "@sphereon/ssi-types": "workspace:*",
     "@sphereon/vc-status-list": "7.0.0-next.0",
     "@veramo/core": "4.2.0",

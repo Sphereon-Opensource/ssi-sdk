@@ -1,12 +1,11 @@
 import { PresentationDefinitionWithLocation, PresentationExchange } from '@sphereon/did-auth-siop'
 import { SelectResults, Status, SubmissionRequirementMatch } from '@sphereon/pex'
 import { Format } from '@sphereon/pex-models'
-import { isManagedIdentifierDidOpts, ManagedIdentifierOpts } from '@sphereon/ssi-sdk-ext.identifier-resolution'
+import { ManagedIdentifierOptsOrResult, ManagedIdentifierResult } from '@sphereon/ssi-sdk-ext.identifier-resolution'
 import { ProofOptions } from '@sphereon/ssi-sdk.core'
 import { UniqueDigitalCredential, verifiableCredentialForRoleFilter } from '@sphereon/ssi-sdk.credential-store'
 import { CredentialRole, FindDigitalCredentialArgs } from '@sphereon/ssi-sdk.data-store'
-import { CompactJWT, CredentialMapper, Hasher, W3CVerifiableCredential } from '@sphereon/ssi-types'
-import { encodeJoseBlob } from '@veramo/utils'
+import { CompactJWT, Hasher, OriginalVerifiableCredential } from '@sphereon/ssi-types'
 import {
   DEFAULT_JWT_PROOF_TYPE,
   IGetPresentationExchangeArgs,
@@ -19,19 +18,19 @@ import { OpSession } from './OpSession'
 
 export class OID4VP {
   private readonly session: OpSession
-  private readonly allDIDs: string[]
+  private readonly allIdentifiers: string[]
   private readonly hasher?: Hasher
 
   private constructor(args: IOID4VPArgs) {
-    const { session, allDIDs, hasher } = args
+    const { session, allIdentifiers, hasher } = args
 
     this.session = session
-    this.allDIDs = allDIDs ?? []
+    this.allIdentifiers = allIdentifiers ?? []
     this.hasher = hasher
   }
 
-  public static async init(session: OpSession, allDIDs: string[], hasher?: Hasher): Promise<OID4VP> {
-    return new OID4VP({ session, allDIDs: allDIDs ?? (await session.getSupportedDIDs()), hasher })
+  public static async init(session: OpSession, allIdentifiers: string[], hasher?: Hasher): Promise<OID4VP> {
+    return new OID4VP({ session, allIdentifiers: allIdentifiers ?? (await session.getSupportedDIDs()), hasher })
   }
 
   public async getPresentationDefinitions(): Promise<PresentationDefinitionWithLocation[] | undefined> {
@@ -43,10 +42,10 @@ export class OID4VP {
   }
 
   private getPresentationExchange(args: IGetPresentationExchangeArgs): PresentationExchange {
-    const { verifiableCredentials, allDIDs, hasher } = args
+    const { verifiableCredentials, allIdentifiers, hasher } = args
 
     return new PresentationExchange({
-      allDIDs: allDIDs ?? this.allDIDs,
+      allDIDs: allIdentifiers ?? this.allIdentifiers,
       allVerifiableCredentials: verifiableCredentials,
       hasher: hasher ?? this.hasher,
     })
@@ -60,7 +59,7 @@ export class OID4VP {
       restrictToFormats?: Format
       restrictToDIDMethods?: string[]
       proofOpts?: ProofOptions
-      idOpts?: ManagedIdentifierOpts
+      idOpts?: ManagedIdentifierOptsOrResult
       skipDidResolution?: boolean
       holderDID?: string
       subjectIsHolder?: boolean
@@ -79,16 +78,16 @@ export class OID4VP {
       restrictToFormats?: Format
       restrictToDIDMethods?: string[]
       proofOpts?: ProofOptions
-      idOpts?: ManagedIdentifierOpts
+      idOpts?: ManagedIdentifierOptsOrResult
       skipDidResolution?: boolean
-      holderDID?: string
+      holder?: string
       subjectIsHolder?: boolean
       applyFilter?: boolean
       hasher?: Hasher
     },
   ): Promise<VerifiablePresentationWithDefinition> {
-    const { subjectIsHolder, holderDID, forceNoCredentialsInVP = false } = { ...opts }
-    if (subjectIsHolder && holderDID) {
+    const { subjectIsHolder, holder, forceNoCredentialsInVP = false } = { ...opts }
+    if (subjectIsHolder && holder) {
       throw Error('Cannot both have subject is holder and a holderDID value at the same time (programming error)')
     }
     if (forceNoCredentialsInVP) {
@@ -113,7 +112,17 @@ export class OID4VP {
             ),
           )
         }
-        const firstVC = CredentialMapper.toUniformCredential(selectedVerifiableCredentials.credentials[0], { hasher: opts?.hasher ?? this.hasher })
+        const firstUniqueDC = selectedVerifiableCredentials.credentials[0]
+        //        const firstVC = firstUniqueDC.uniformVerifiableCredential!
+        if (typeof firstUniqueDC !== 'object' || !('digitalCredential' in firstUniqueDC)) {
+          return Promise.reject(Error('If no opts provided, credentials should be of type UniqueDigitalCredential'))
+        }
+        idOpts = await this.session.context.agent.identifierManagedGetByKid({
+          identifier: firstUniqueDC.digitalCredential.kmsKeyRef,
+          kmsKeyRef: firstUniqueDC.digitalCredential.kmsKeyRef,
+        })
+
+        /*
         const holder = CredentialMapper.isSdJwtDecodedCredential(firstVC)
           ? firstVC.decodedPayload.cnf?.jwk
             ? //TODO SDK-19: convert the JWK to hex and search for the appropriate key and associated DID
@@ -123,11 +132,12 @@ export class OID4VP {
           : Array.isArray(firstVC.credentialSubject)
             ? firstVC.credentialSubject[0].id
             : firstVC.credentialSubject.id
-        if (holder) {
-          idOpts = { identifier: holder }
-        }
-      } else if (opts?.holderDID) {
-        idOpts = { identifier: opts.holderDID }
+          if (holder) {
+              idOpts = {identifier: holder}
+          }
+*/
+      } else if (opts?.holder) {
+        idOpts = { identifier: opts.holder }
       }
     }
 
@@ -139,12 +149,12 @@ export class OID4VP {
             restrictToFormats: opts?.restrictToFormats,
             restrictToDIDMethods: opts?.restrictToDIDMethods,
             filterOpts: {
-              verifiableCredentials: selectedVerifiableCredentials.credentials.map((vc) => CredentialMapper.storedCredentialToOriginalFormat(vc)),
+              verifiableCredentials: selectedVerifiableCredentials.credentials,
             },
           })
         : {
             definition: selectedVerifiableCredentials.definition,
-            credentials: selectedVerifiableCredentials.credentials.map((vc) => CredentialMapper.storedCredentialToOriginalFormat(vc)),
+            credentials: selectedVerifiableCredentials.credentials,
           }
 
     if (!idOpts) {
@@ -159,16 +169,18 @@ export class OID4VP {
       format: opts?.restrictToFormats ?? selectedVerifiableCredentials.definition.definition.format,
       skipDidResolution: opts?.skipDidResolution ?? false,
     })
-
+    const identifier: ManagedIdentifierResult = await this.session.context.agent.identifierManagedGet(idOpts)
+    const verifiableCredentials = vcs.credentials.map((credential) =>
+      typeof credential === 'object' && 'digitalCredential' in credential ? credential.originalVerifiableCredential! : credential,
+    )
     const presentationResult = await this.getPresentationExchange({
-      verifiableCredentials: vcs.credentials,
-      allDIDs: this.allDIDs,
+      verifiableCredentials: verifiableCredentials,
+      allIdentifiers: this.allIdentifiers,
       hasher: opts?.hasher,
-    }).createVerifiablePresentation(vcs.definition.definition, vcs.credentials, signCallback, {
+    }).createVerifiablePresentation(vcs.definition.definition, verifiableCredentials, signCallback, {
       proofOptions,
       // fixme: Update to newer siop-vp to not require dids here.
-
-      holderDID: isManagedIdentifierDidOpts(idOpts) ? (await this.session.context.agent.identifierManagedGetByDid(idOpts)).did : undefined,
+      holderDID: identifier.kid,
     })
 
     const verifiablePresentation =
@@ -182,7 +194,7 @@ export class OID4VP {
     return {
       ...presentationResult,
       verifiablePresentation,
-      verifiableCredentials: vcs.credentials,
+      verifiableCredentials: verifiableCredentials,
       definition: selectedVerifiableCredentials.definition,
       idOpts: idOpts,
     }
@@ -192,7 +204,7 @@ export class OID4VP {
     credentialRole: CredentialRole,
     opts?: {
       filterOpts?: {
-        verifiableCredentials?: W3CVerifiableCredential[]
+        verifiableCredentials?: UniqueDigitalCredential[]
         filter?: FindDigitalCredentialArgs
       }
       holderDIDs?: string[]
@@ -214,16 +226,38 @@ export class OID4VP {
     credentialRole: CredentialRole,
     presentationDefinition: PresentationDefinitionWithLocation,
     opts?: {
-      filterOpts?: { verifiableCredentials?: W3CVerifiableCredential[]; filter?: FindDigitalCredentialArgs }
+      filterOpts?: { verifiableCredentials?: (UniqueDigitalCredential | OriginalVerifiableCredential)[]; filter?: FindDigitalCredentialArgs }
       holderDIDs?: string[]
       restrictToFormats?: Format
       restrictToDIDMethods?: string[]
     },
   ): Promise<VerifiableCredentialsWithDefinition> {
+    const udcMap = new Map<OriginalVerifiableCredential, UniqueDigitalCredential | OriginalVerifiableCredential>()
+    opts?.filterOpts?.verifiableCredentials?.forEach((credential) => {
+      if (typeof credential === 'object' && 'digitalCredential' in credential) {
+        udcMap.set(credential.originalVerifiableCredential!, credential)
+      } else {
+        udcMap.set(credential, credential)
+      }
+    })
+
+    const credentials = (
+      await this.filterCredentialsWithSelectionStatus(credentialRole, presentationDefinition, {
+        ...opts,
+        filterOpts: {
+          verifiableCredentials: opts?.filterOpts?.verifiableCredentials?.map((credential) => {
+            if (typeof credential === 'object' && 'digitalCredential' in credential) {
+              return credential.originalVerifiableCredential!
+            } else {
+              return credential
+            }
+          }),
+        },
+      })
+    ).verifiableCredential
     return {
       definition: presentationDefinition,
-      credentials: (await this.filterCredentialsWithSelectionStatus(credentialRole, presentationDefinition, opts))
-        .verifiableCredential as W3CVerifiableCredential[],
+      credentials: credentials?.map((vc) => udcMap.get(vc)!) ?? [],
     }
   }
 
@@ -231,7 +265,7 @@ export class OID4VP {
     credentialRole: CredentialRole,
     presentationDefinition: PresentationDefinitionWithLocation,
     opts?: {
-      filterOpts?: { verifiableCredentials?: W3CVerifiableCredential[]; filter?: FindDigitalCredentialArgs }
+      filterOpts?: { verifiableCredentials?: OriginalVerifiableCredential[]; filter?: FindDigitalCredentialArgs }
       holderDIDs?: string[]
       restrictToFormats?: Format
       restrictToDIDMethods?: string[]
@@ -256,10 +290,10 @@ export class OID4VP {
   private async getCredentials(
     credentialRole: CredentialRole,
     filterOpts?: {
-      verifiableCredentials?: W3CVerifiableCredential[]
+      verifiableCredentials?: OriginalVerifiableCredential[]
       filter?: FindDigitalCredentialArgs
     },
-  ): Promise<W3CVerifiableCredential[]> {
+  ): Promise<OriginalVerifiableCredential[]> {
     if (filterOpts?.verifiableCredentials && filterOpts.verifiableCredentials.length > 0) {
       return filterOpts.verifiableCredentials
     }

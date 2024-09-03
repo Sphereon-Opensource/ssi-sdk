@@ -85,6 +85,7 @@ export class DigitalCredentialStore extends AbstractDigitalCredentialStore {
     }
     try {
       const connection = await this.dbConnection
+      // TODO: get Id and remove all with same parentId
       const result = await connection.getRepository(DigitalCredentialEntity).delete(query)
       return result.affected === 1
     } catch (error) {
@@ -123,6 +124,7 @@ export class DigitalCredentialStore extends AbstractDigitalCredentialStore {
       ...credential,
       ...(args.verifiedState !== CredentialStateType.REVOKED && { verifiedAt: args.verifiedAt }),
       ...(args.verifiedState === CredentialStateType.REVOKED && { revokedAt: args.revokedAt }),
+      identifierMethod: credential.identifierMethod,
       lastUpdatedAt: new Date(),
       verifiedState: args.verifiedState,
     }

@@ -8,7 +8,7 @@ import { ErrorDetails, IOID4VCIHolder, MappedCredentialToAccept } from '@sphereo
 import { IPresentationExchange } from '@sphereon/ssi-sdk.presentation-exchange'
 import { IDidAuthSiopOpAuthenticator } from '@sphereon/ssi-sdk.siopv2-oid4vp-op-auth'
 import { PresentationSubmission, W3CVerifiableCredential } from '@sphereon/ssi-types'
-import { IAgentContext, IDIDManager, IIdentifier, IKeyManager, IPluginMethodMap, IResolver } from '@veramo/core'
+import { IAgentContext, IDIDManager, IKeyManager, IPluginMethodMap, IResolver } from '@veramo/core'
 import { CreateEbsiDidOnLedgerResult, CreateEbsiDidParams } from '../did'
 import { AttestationAuthRequestUrlResult } from '../functions'
 
@@ -232,7 +232,7 @@ export type AttestationResult = {
   contactAlias: string
   contact: Party
   credentialBranding?: Record<string, Array<IBasicCredentialLocaleBranding>> | undefined
-  identifier: IIdentifier
+  identifier: ManagedIdentifierDidResult
   error: ErrorDetails | undefined
   credentials: Array<MappedCredentialToAccept>
 }

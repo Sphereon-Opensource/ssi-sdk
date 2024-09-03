@@ -1,34 +1,21 @@
+import { KBJwt } from '@sd-jwt/core'
+import { decodeSdJwt } from '@sd-jwt/decode'
+import { SdJwtVcPayload } from '@sd-jwt/sd-jwt-vc'
 import { DisclosureFrame, kbPayload } from '@sd-jwt/types'
-import { createAgent, IDIDManager, IKeyManager, IResolver, TAgent } from '@veramo/core'
-import { DIDManager, MemoryDIDStore } from '@veramo/did-manager'
 import { JwkDIDProvider } from '@sphereon/ssi-sdk-ext.did-provider-jwk'
 import { getDidJwkResolver } from '@sphereon/ssi-sdk-ext.did-resolver-jwk'
-import { DIDResolverPlugin } from '@veramo/did-resolver'
-import { DIDDocument, Resolver, VerificationMethod } from 'did-resolver'
-import { SdJwtVcPayload } from '@sd-jwt/sd-jwt-vc'
-import { decodeSdJwt } from '@sd-jwt/decode'
-import { KBJwt } from '@sd-jwt/core'
-import { ISDJwtPlugin, SDJwtPlugin } from '../index'
-import { createHash, randomBytes, subtle } from 'crypto'
+import { IdentifierResolution, IIdentifierResolution } from '@sphereon/ssi-sdk-ext.identifier-resolution'
+import { IJwtService, JwtService } from '@sphereon/ssi-sdk-ext.jwt-service'
 import { MemoryKeyStore, MemoryPrivateKeyStore, SphereonKeyManager } from '@sphereon/ssi-sdk-ext.key-manager'
 import { SphereonKeyManagementSystem } from '@sphereon/ssi-sdk-ext.kms-local'
+import { createAgent, IDIDManager, IKeyManager, IResolver, TAgent } from '@veramo/core'
+import { DIDManager, MemoryDIDStore } from '@veramo/did-manager'
+import { DIDResolverPlugin } from '@veramo/did-resolver'
+import { DIDDocument, Resolver, VerificationMethod } from 'did-resolver'
+import { defaultGenerateDigest } from '../defaultCallbacks'
+import { ISDJwtPlugin, SDJwtPlugin } from '../index'
 
-const generateDigest = (data: string, algorithm: string) => {
-  return createHash(algorithm).update(data).digest()
-}
-
-const generateSalt = (): string => {
-  return randomBytes(16).toString('hex')
-}
-
-async function verifySignature<T>(data: string, signature: string, key: JsonWebKey) {
-  let { alg, crv } = key
-  if (alg === 'ES256') alg = 'ECDSA'
-  const publicKey = await subtle.importKey('jwk', key, { name: alg, namedCurve: crv } as EcKeyImportParams, true, ['verify'])
-  return Promise.resolve(subtle.verify({ name: alg as string, hash: 'SHA-256' }, publicKey, Buffer.from(signature, 'base64'), Buffer.from(data)))
-}
-
-type AgentType = IDIDManager & IKeyManager & IResolver & ISDJwtPlugin
+type AgentType = IDIDManager & IKeyManager & IIdentifierResolution & IJwtService & IResolver & ISDJwtPlugin
 
 describe('Agent plugin', () => {
   let agent: TAgent<AgentType>
@@ -61,11 +48,9 @@ describe('Agent plugin', () => {
   beforeAll(async () => {
     agent = createAgent<AgentType>({
       plugins: [
-        new SDJwtPlugin({
-          hasher: generateDigest,
-          saltGenerator: generateSalt,
-          verifySignature,
-        }),
+        new SDJwtPlugin(),
+        new IdentifierResolution(),
+        new JwtService(),
         new SphereonKeyManager({
           store: new MemoryKeyStore(),
           kms: {
@@ -179,7 +164,7 @@ describe('Agent plugin', () => {
       },
     })
     expect(presentation).toBeDefined()
-    const decoded = await decodeSdJwt(presentation.presentation, generateDigest)
+    const decoded = await decodeSdJwt(presentation.presentation, defaultGenerateDigest)
     expect(decoded.kbJwt).toBeDefined()
     expect(((decoded.kbJwt as KBJwt).payload as kbPayload).aud).toBe('1')
   })
@@ -213,7 +198,7 @@ describe('Agent plugin', () => {
       },
     })
     expect(presentation).toBeDefined()
-    const decoded = await decodeSdJwt(presentation.presentation, generateDigest)
+    const decoded = await decodeSdJwt(presentation.presentation, defaultGenerateDigest)
     expect(decoded.kbJwt).toBeDefined()
     expect(((decoded.kbJwt as KBJwt).payload as kbPayload).aud).toBe('1')
   })
@@ -279,7 +264,7 @@ describe('Agent plugin', () => {
       kb: true,
     })
     expect(result).toBeDefined()
-    expect((result.verifiedPayloads.payload as typeof claims).given_name).toBe('John')
+    expect((result.payload as typeof claims).given_name).toBe('John')
   })
 
   it('verify a presentation with sub set', async () => {
@@ -316,6 +301,6 @@ describe('Agent plugin', () => {
       kb: true,
     })
     expect(result).toBeDefined()
-    expect((result.verifiedPayloads.payload as typeof claims).given_name).toBe('John')
+    expect((result.payload as typeof claims).given_name).toBe('John')
   })
 })

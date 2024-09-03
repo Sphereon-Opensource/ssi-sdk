@@ -116,6 +116,8 @@ export default (testContext: { getAgent: () => ConfiguredAgent; setup: () => Pro
         credential: {
           rawDocument: JSON.stringify(vc5),
           credentialRole: CredentialRole.HOLDER,
+          kmsKeyRef: 'testKeyRef',
+          identifierMethod: 'did',
           issuerCorrelationType: CredentialCorrelationType.DID,
           issuerCorrelationId: '',
         },
@@ -127,6 +129,8 @@ export default (testContext: { getAgent: () => ConfiguredAgent; setup: () => Pro
       await localAgent.crsAddCredential({
         credential: {
           rawDocument: JSON.stringify(vc6),
+          kmsKeyRef: 'testKeyRef',
+          identifierMethod: 'did',
           credentialRole: CredentialRole.HOLDER,
           issuerCorrelationType: CredentialCorrelationType.DID,
           issuerCorrelationId: '',

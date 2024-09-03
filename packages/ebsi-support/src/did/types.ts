@@ -1,6 +1,6 @@
 import { W3CVerifiableCredential } from '@sphereon/ssi-types'
 import { IAgentContext, IIdentifier, IKeyManager, MinimalImportableKey, TKeyType } from '@veramo/core'
-import { IService } from '@veramo/core/build/types/IIdentifier'
+import { IService } from '@veramo/core'
 import { DIDDocument } from 'did-resolver'
 import { AccessListish, BigNumberish, BytesLike } from 'ethers'
 import { ApiOpts, EbsiEnvironment } from '../types/IEbsiSupport'

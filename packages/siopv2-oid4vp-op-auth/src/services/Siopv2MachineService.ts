@@ -1,20 +1,16 @@
 import { SupportedVersion } from '@sphereon/did-auth-siop'
 import { IPresentationDefinition, PEX } from '@sphereon/pex'
 import { InputDescriptorV1, InputDescriptorV2, PresentationDefinitionV1, PresentationDefinitionV2 } from '@sphereon/pex-models'
-import { getOrCreatePrimaryIdentifier, SupportedDidMethodEnum } from '@sphereon/ssi-sdk-ext.did-utils'
-import { isManagedIdentifierDidOpts, ManagedIdentifierOpts } from '@sphereon/ssi-sdk-ext.identifier-resolution'
+import { ManagedIdentifierOptsOrResult } from '@sphereon/ssi-sdk-ext.identifier-resolution'
 import { verifiableCredentialForRoleFilter } from '@sphereon/ssi-sdk.credential-store'
 import { ConnectionType, CredentialRole } from '@sphereon/ssi-sdk.data-store'
 import { CredentialMapper, Loggers, PresentationSubmission } from '@sphereon/ssi-types'
-import { IIdentifier } from '@veramo/core'
 import { OID4VP, OpSession } from '../session'
 import {
-  DidAgents,
   LOGGER_NAMESPACE,
   RequiredContext,
   SelectableCredential,
   SelectableCredentialsMap,
-  Siopv2HolderEvent,
   SuitableCredentialAgents,
   VerifiableCredentialsWithDefinition,
   VerifiablePresentationWithDefinition,
@@ -27,29 +23,31 @@ export const siopSendAuthorizationResponse = async (
   args: {
     sessionId: string
     verifiableCredentialsWithDefinition?: VerifiableCredentialsWithDefinition[]
-    idOpts?: ManagedIdentifierOpts
+    idOpts?: ManagedIdentifierOptsOrResult
   },
   context: RequiredContext,
 ) => {
   const { agent } = context
-  const agentContext = { ...context, agent: context.agent as DidAgents }
+  //const agentContext = { ...context, agent: context.agent as DidAgents }
   let { idOpts } = args
 
   if (connectionType !== ConnectionType.SIOPv2_OpenID4VP) {
     return Promise.reject(Error(`No supported authentication provider for type: ${connectionType}`))
   }
   const session: OpSession = await agent.siopGetOPSession({ sessionId: args.sessionId })
-  let identifiers: Array<IIdentifier> =
+  /* let identifiers: Array<IIdentifier> =
     idOpts && isManagedIdentifierDidOpts(idOpts)
       ? [(await context.agent.identifierManagedGetByDid(idOpts)).identifier]
       : await session.getSupportedIdentifiers()
   if (!identifiers || identifiers.length === 0) {
     throw Error(`No DID methods found in agent that are supported by the relying party`)
   }
+  */
   const request = await session.getAuthorizationRequest()
   const aud = await request.authorizationRequest.getMergedProperty<string>('aud')
   logger.debug(`AUD: ${aud}`)
   logger.debug(JSON.stringify(request.authorizationRequest))
+  /*
   const clientId = await request.authorizationRequest.getMergedProperty<string>('client_id')
   const redirectUri = await request.authorizationRequest.getMergedProperty<string>('redirect_uri')
   if (clientId?.toLowerCase().includes('.ebsi.eu') || redirectUri?.toLowerCase().includes('.ebsi.eu')) {
@@ -76,8 +74,9 @@ export const siopSendAuthorizationResponse = async (
   }
 
   // todo: This should be moved to code calling the sendAuthorizationResponse (this) method, as to allow the user to subselect and approve credentials!
-  let presentationsAndDefs: VerifiablePresentationWithDefinition[] | undefined
   let identifier: IIdentifier = identifiers[0]
+*/
+  let presentationsAndDefs: VerifiablePresentationWithDefinition[] | undefined
   let presentationSubmission: PresentationSubmission | undefined
   if (await session.hasPresentationDefinitions()) {
     const oid4vp: OID4VP = await session.getOID4VP({})
@@ -93,18 +92,18 @@ export const siopSendAuthorizationResponse = async (
         : 'https://self-issued.me/v2')
     logger.log(`NONCE: ${session.nonce}, domain: ${domain}`)
 
-    const firstVC = CredentialMapper.toUniformCredential(credentialsAndDefinitions[0].credentials[0])
-    const holder = Array.isArray(firstVC.credentialSubject) ? firstVC.credentialSubject[0].id : firstVC.credentialSubject.id
-    if (holder) {
-      try {
-        identifier = await session.context.agent.didManagerGet({ did: holder })
-      } catch (e) {
-        logger.log(`Holder DID not found: ${holder}`)
-      }
+    const firstUniqueDC = credentialsAndDefinitions[0].credentials[0]
+    // FIXME Funke EBSI needs to be fixed
+    if (typeof firstUniqueDC !== 'object' || !('digitalCredential' in firstUniqueDC)) {
+      return Promise.reject(Error('SiopMachine only supports UniqueDigitalCredentials for now'))
     }
+    const identifier = await session.context.agent.identifierManagedGetByKid({
+      identifier: firstUniqueDC.digitalCredential.kmsKeyRef,
+      kmsKeyRef: firstUniqueDC.digitalCredential.kmsKeyRef,
+    })
 
     presentationsAndDefs = await oid4vp.createVerifiablePresentations(CredentialRole.HOLDER, credentialsAndDefinitions, {
-      idOpts: { identifier },
+      idOpts: identifier,
       proofOpts: {
         nonce: session.nonce,
         domain,

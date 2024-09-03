@@ -37,6 +37,8 @@ export default (testContext: { getAgent: () => ConfiguredAgent; setup: () => Pro
       const digitalCredential: AddDigitalCredential = {
         credentialRole: CredentialRole.HOLDER,
         tenantId: 'test-tenant',
+        kmsKeyRef: 'testKeyRef',
+        identifierMethod: 'did',
         issuerCorrelationId: 'did:example:the-issuer',
         issuerCorrelationType: CredentialCorrelationType.DID,
         rawDocument: JSON.stringify(exampleVC),
@@ -46,8 +48,10 @@ export default (testContext: { getAgent: () => ConfiguredAgent; setup: () => Pro
       const sdJwtAdd: AddDigitalCredential = {
         credentialRole: CredentialRole.HOLDER,
         tenantId: 'test-tenant',
+        kmsKeyRef: 'testKeyRef',
+        identifierMethod: 'did',
         issuerCorrelationId: 'CN="test"',
-        issuerCorrelationType: CredentialCorrelationType.X509_CN,
+        issuerCorrelationType: CredentialCorrelationType.X509_SAN,
         rawDocument: examplePid,
       }
       pidSdJwtCredential = await agent.crsAddCredential({ credential: sdJwtAdd })
@@ -205,6 +209,8 @@ export default (testContext: { getAgent: () => ConfiguredAgent; setup: () => Pro
       const digitalCredential1: AddDigitalCredential = {
         credentialRole: CredentialRole.VERIFIER,
         tenantId: 'test-tenant',
+        kmsKeyRef: 'testKeyRef',
+        identifierMethod: 'did',
         issuerCorrelationId: 'did:example:item1',
         issuerCorrelationType: CredentialCorrelationType.DID,
         rawDocument: JSON.stringify(exampleVC),
@@ -216,6 +222,8 @@ export default (testContext: { getAgent: () => ConfiguredAgent; setup: () => Pro
       const digitalCredential2: AddDigitalCredential = {
         credentialRole: CredentialRole.VERIFIER,
         tenantId: 'test-tenant',
+        kmsKeyRef: 'testKeyRef',
+        identifierMethod: 'did',
         issuerCorrelationId: 'did:example:item2',
         issuerCorrelationType: CredentialCorrelationType.DID,
         rawDocument: JSON.stringify(exampleVC2),

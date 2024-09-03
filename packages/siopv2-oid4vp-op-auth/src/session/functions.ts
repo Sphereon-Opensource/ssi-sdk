@@ -1,22 +1,17 @@
-import {
-  CheckLinkedDomain,
-  OP,
-  OPBuilder,
-  PassBy,
-  PresentationSignCallback,
-  ResponseMode,
-  SigningAlgo,
-  SupportedVersion,
-} from '@sphereon/did-auth-siop'
+import { OP, OPBuilder, PassBy, PresentationSignCallback, ResponseMode, SupportedVersion, VerifyJwtCallback } from '@sphereon/did-auth-siop'
+import { CreateJwtCallback, JwtHeader, JwtPayload } from '@sphereon/oid4vc-common'
 import { Format } from '@sphereon/pex-models'
-import { getAgentDIDMethods, getAgentResolver } from '@sphereon/ssi-sdk-ext.did-utils'
-import { isManagedIdentifierDidOpts, isManagedIdentifierDidResult, ManagedIdentifierOpts } from '@sphereon/ssi-sdk-ext.identifier-resolution'
-import { KeyAlgo, SuppliedSigner } from '@sphereon/ssi-sdk.core'
+import { isManagedIdentifierDidOpts, isManagedIdentifierX5cOpts, ManagedIdentifierOptsOrResult } from '@sphereon/ssi-sdk-ext.identifier-resolution'
+import { JwsCompactResult } from '@sphereon/ssi-sdk-ext.jwt-service'
 import { createPEXPresentationSignCallback } from '@sphereon/ssi-sdk.presentation-exchange'
-import { IVerifyCallbackArgs, IVerifyCredentialResult } from '@sphereon/wellknown-dids-client'
+import { SigningAlgo } from '@sphereon/ssi-sdk.siopv2-oid4vp-common'
+import { IVerifyCallbackArgs, IVerifyCredentialResult, VerifyCallback } from '@sphereon/wellknown-dids-client'
 import { TKeyType } from '@veramo/core'
+import { JWTVerifyOptions } from 'did-jwt'
+import { Resolvable } from 'did-resolver'
 import { EventEmitter } from 'events'
 import { IOPOptions, IRequiredContext } from '../types'
+import { JwtIssuer } from '@sphereon/oid4vc-common/lib/jwt/JwtIssuer'
 
 export async function createOID4VPPresentationSignCallback({
   presentationSignCallback,
@@ -29,7 +24,7 @@ export async function createOID4VPPresentationSignCallback({
   skipDidResolution,
 }: {
   presentationSignCallback?: PresentationSignCallback
-  idOpts: ManagedIdentifierOpts
+  idOpts: ManagedIdentifierOptsOrResult
   domain?: string
   challenge?: string
   fetchRemoteContexts?: boolean
@@ -60,7 +55,7 @@ export async function createOPBuilder({
   context,
 }: {
   opOptions: IOPOptions
-  idOpts?: ManagedIdentifierOpts
+  idOpts?: ManagedIdentifierOptsOrResult
   context: IRequiredContext
 }): Promise<OPBuilder> {
   const eventEmitter = opOptions.eventEmitter ?? new EventEmitter()
@@ -75,22 +70,13 @@ export async function createOPBuilder({
       ],
     )
     .withExpiresIn(opOptions.expiresIn ?? 300)
-    .withCheckLinkedDomain(opOptions.checkLinkedDomains ?? CheckLinkedDomain.IF_PRESENT)
-    .withCustomResolver(
-      opOptions.resolveOpts?.resolver ??
-        getAgentResolver(context, {
-          uniresolverResolution: opOptions.resolveOpts?.noUniversalResolverFallback !== true,
-          localResolution: true,
-          resolverResolution: true,
-        }),
-    )
     .withEventEmitter(eventEmitter)
     .withRegistration({
       passBy: PassBy.VALUE,
     })
 
-  const methods = opOptions.supportedDIDMethods ?? (await getAgentDIDMethods(context))
-  methods.forEach((method) => builder.addDidMethod(method))
+  //const methods = opOptions.supportedDIDMethods ?? (await getAgentDIDMethods(context))
+  //const resolver = getResolver({ subjectSyntaxTypesSupported: methods })
 
   const wellknownDIDVerifyCallback = opOptions.wellknownDIDVerifyCallback
     ? opOptions.wellknownDIDVerifyCallback
@@ -98,26 +84,41 @@ export async function createOPBuilder({
         const result = await context.agent.verifyCredential({ credential: args.credential, fetchRemoteContexts: true })
         return { verified: result.verified }
       }
-  builder.withWellknownDIDVerifyCallback(wellknownDIDVerifyCallback)
-
+  builder.withVerifyJwtCallback(
+    opOptions.verifyJwtCallback
+      ? opOptions.verifyJwtCallback
+      : getVerifyJwtCallback(
+          {
+            verifyOpts: {
+              wellknownDIDVerifyCallback,
+              checkLinkedDomain: 'if_present',
+            },
+          },
+          context,
+        ),
+  )
   if (idOpts) {
     if (opOptions.skipDidResolution && isManagedIdentifierDidOpts(idOpts)) {
       idOpts.offlineWhenNoDIDRegistered = true
     }
+    /* FIXME Funke 
     const resolution = await context.agent.identifierManagedGet(idOpts)
-    if (!isManagedIdentifierDidOpts(idOpts) || !isManagedIdentifierDidResult(resolution)) {
-      /*last part is only there to get the available properties of a DID result*/
+   if (!isManagedIdentifierDidOpts(idOpts) || !isManagedIdentifierDidResult(resolution)) {
+      /!*last part is only there to get the available properties of a DID result*!/
       // Remove this once we use the newer version
       return Promise.reject(Error(`The current version of SIOP-OID4VP we use only works with DIDs`))
     }
-
-    const key = resolution.key
+*/
+    /*const key = resolution.key
     builder.withSuppliedSignature(
       SuppliedSigner(key, context, getSigningAlgo(key.type) as unknown as KeyAlgo),
       resolution.did,
       resolution.kid,
       getSigningAlgo(key.type),
-    )
+    )*/
+    // builder.withCreateJwtCallback(signCallback(resolution, context))
+    const createJwtCallback = createJwtCallbackWithIdOpts(idOpts, context)
+    builder.withCreateJwtCallback(createJwtCallback as CreateJwtCallback<any>)
     builder.withPresentationSignCallback(
       await createOID4VPPresentationSignCallback({
         presentationSignCallback: opOptions.presentationSignCallback,
@@ -126,8 +127,76 @@ export async function createOPBuilder({
         context,
       }),
     )
+  } else {
+    const createJwtCallback = createJwtCallbackWithOpOpts(opOptions, context)
+    builder.withCreateJwtCallback(createJwtCallback as CreateJwtCallback<any>)
   }
   return builder
+}
+
+export function createJwtCallbackWithIdOpts(
+  idOpts: ManagedIdentifierOptsOrResult,
+  context: IRequiredContext,
+): (jwtIssuer: JwtIssuer, jwt: { header: JwtHeader; payload: JwtPayload }) => Promise<string> {
+  return async (jwtIssuer: JwtIssuer, jwt: { header: JwtHeader; payload: JwtPayload }) => {
+    if (!(isManagedIdentifierDidOpts(idOpts) || isManagedIdentifierX5cOpts(idOpts))) {
+      return Promise.reject(Error(`JWT issuer method ${jwtIssuer.method} not yet supported`))
+    }
+    const result: JwsCompactResult = await context.agent.jwtCreateJwsCompactSignature({
+      // FIXME fix cose-key inference
+      // @ts-ignore
+      issuer: { identifier: idOpts.identifier, noIdentifierInHeader: false },
+      // FIXME fix JWK key_ops
+      // @ts-ignore
+      protectedHeader: jwt.header,
+      payload: jwt.payload,
+    })
+    return result.jwt
+  }
+}
+
+export function createJwtCallbackWithOpOpts(
+  opOpts: IOPOptions,
+  context: IRequiredContext,
+): (jwtIssuer: JwtIssuer, jwt: { header: JwtHeader; payload: JwtPayload }) => Promise<string> {
+  return async (jwtIssuer: JwtIssuer, jwt: { header: JwtHeader; payload: JwtPayload }) => {
+    let identifier: string | Array<string>
+    if (jwtIssuer.method == 'did') {
+      identifier = jwtIssuer.didUrl
+    } else if (jwtIssuer.method == 'x5c') {
+      identifier = jwtIssuer.x5c
+    } else {
+      return Promise.reject(Error(`JWT issuer method ${jwtIssuer.method} not yet supported`))
+    }
+
+    const result: JwsCompactResult = await context.agent.jwtCreateJwsCompactSignature({
+      // FIXME fix cose-key inference
+      // @ts-ignore
+      issuer: { identifier: identifier, kmsKeyRef: idOpts.kmsKeyRef, noIdentifierInHeader: false },
+      // FIXME fix JWK key_ops
+      // @ts-ignore
+      protectedHeader: jwt.header,
+      payload: jwt.payload,
+    })
+    return result.jwt
+  }
+}
+
+function getVerifyJwtCallback(
+  _opts: {
+    resolver?: Resolvable
+    verifyOpts?: JWTVerifyOptions & {
+      checkLinkedDomain: 'never' | 'if_present' | 'always'
+      wellknownDIDVerifyCallback?: VerifyCallback
+    }
+  },
+  context: IRequiredContext,
+): VerifyJwtCallback {
+  return async (_jwtVerifier, jwt) => {
+    const result = await context.agent.jwtVerifyJwsSignature({ jws: jwt.raw })
+    console.log(result.message)
+    return !result.error
+  }
 }
 
 export async function createOP({
@@ -136,7 +205,7 @@ export async function createOP({
   context,
 }: {
   opOptions: IOPOptions
-  idOpts?: ManagedIdentifierOpts
+  idOpts?: ManagedIdentifierOptsOrResult
   context: IRequiredContext
 }): Promise<OP> {
   return (await createOPBuilder({ opOptions, idOpts, context })).build()

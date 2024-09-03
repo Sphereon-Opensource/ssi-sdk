@@ -1,8 +1,13 @@
-import { Hasher, KBOptions, SaltGenerator } from '@sd-jwt/types'
+import { Hasher, kbHeader, KBOptions, kbPayload, SaltGenerator } from '@sd-jwt/types'
 import { SdJwtVcPayload as SdJwtPayload } from '@sd-jwt/sd-jwt-vc'
+import { IIdentifierResolution } from '@sphereon/ssi-sdk-ext.identifier-resolution'
+import { IJwtService } from '@sphereon/ssi-sdk-ext.jwt-service'
+import { JoseSignatureAlgorithm } from '@sphereon/ssi-types'
 import { DIDDocumentSection, IAgentContext, IDIDManager, IKeyManager, IPluginMethodMap, IResolver } from '@veramo/core'
 import { ImDLMdoc } from '@sphereon/ssi-sdk.mdl-mdoc'
 import { contextHasPlugin } from '@sphereon/ssi-sdk.agent-config'
+
+export const sdJwtPluginContextMethods: Array<string> = ['createSdJwtVc', 'createSdJwtPresentation', 'verifySdJwtVc', 'verifySdJwtPresentation']
 
 /**
  * My Agent Plugin description.
@@ -123,6 +128,11 @@ export interface ICreateSdJwtPresentationArgs {
   presentationFrame?: IPresentationFrame
 
   /**
+   * Allows to override the holder. Normally it will be looked up from the cnf or sub values
+   */
+  holder?: string
+
+  /**
    * Information to include to add key binding.
    */
   kb?: KBOptions
@@ -157,7 +167,9 @@ export interface IVerifySdJwtVcArgs {
  * @beta
  */
 export type IVerifySdJwtVcResult = {
-  verifiedPayloads: unknown
+  payload: SdJwtPayload
+  header: Record<string, unknown>
+  kb?: { header: kbHeader; payload: kbPayload }
 }
 
 /**
@@ -175,7 +187,9 @@ export interface IVerifySdJwtPresentationArgs {
  * @beta
  */
 export type IVerifySdJwtPresentationResult = {
-  verifiedPayloads: Record<string, unknown>
+  payload: unknown //fixme: maybe this can be `SdJwtPayload`
+  header: Record<string, unknown> | undefined
+  kb?: { header: kbHeader; payload: kbPayload }
 }
 
 export type SignKeyArgs = {
@@ -184,9 +198,9 @@ export type SignKeyArgs = {
 }
 
 export type SignKeyResult = {
-  alg: string
+  alg: JoseSignatureAlgorithm
   key: {
-    kid: string
+    kmsKeyRef: string
     x5c?: string[]
     jwkThumbprint?: string
   }
@@ -199,12 +213,13 @@ export type SignKeyResult = {
  *
  * @beta
  */
-export type IRequiredContext = IAgentContext<IDIDManager & IResolver & IKeyManager & ImDLMdoc>
+export type IRequiredContext = IAgentContext<IDIDManager & IIdentifierResolution & IJwtService & IResolver & IKeyManager & ImDLMdoc>
 
+export type SdJwtVerifySignature = (data: string, signature: string, publicKey: JsonWebKey) => Promise<boolean>
 export interface SdJWTImplementation {
-  saltGenerator: SaltGenerator
-  hasher: Hasher
-  verifySignature: (data: string, signature: string, publicKey: JsonWebKey) => Promise<boolean>
+  saltGenerator?: SaltGenerator
+  hasher?: Hasher
+  verifySignature?: SdJwtVerifySignature
 }
 
 export interface Claims {

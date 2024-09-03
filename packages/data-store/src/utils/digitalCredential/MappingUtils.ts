@@ -3,13 +3,21 @@ import {
   DocumentFormat,
   IVerifiableCredential,
   IVerifiablePresentation,
+  ObjectUtils,
   OriginalVerifiableCredential,
   OriginalVerifiablePresentation,
   SdJwtDecodedVerifiableCredentialPayload,
 } from '@sphereon/ssi-types'
 import { computeEntryHash } from '@veramo/utils'
 import { DigitalCredentialEntity } from '../../entities/digitalCredential/DigitalCredentialEntity'
-import { AddCredentialArgs, CredentialDocumentFormat, DigitalCredential, DocumentType, NonPersistedDigitalCredential } from '../../types'
+import {
+  AddCredentialArgs,
+  CredentialDocumentFormat,
+  DigitalCredential,
+  DocumentType,
+  NonPersistedDigitalCredential,
+  RegulationType,
+} from '../../types'
 
 function determineDocumentType(raw: string): DocumentType {
   const rawDocument = parseRawDocument(raw)
@@ -18,19 +26,26 @@ function determineDocumentType(raw: string): DocumentType {
   }
 
   const hasProof = CredentialMapper.hasProof(rawDocument)
-  const isCredential = CredentialMapper.isCredential(rawDocument)
+  const isCredential = isHex(raw) || ObjectUtils.isBase64(raw) || CredentialMapper.isCredential(rawDocument)
   const isPresentation = CredentialMapper.isPresentation(rawDocument)
 
   if (isCredential) {
-    return hasProof ? DocumentType.VC : DocumentType.C
+    return hasProof || isHex(raw) || ObjectUtils.isBase64(raw) ? DocumentType.VC : DocumentType.C
   } else if (isPresentation) {
     return hasProof ? DocumentType.VP : DocumentType.P
   }
   throw new Error(`Couldn't determine the type of the credential: ${raw}`)
 }
 
-function parseRawDocument(raw: string): OriginalVerifiableCredential | OriginalVerifiablePresentation {
-  if (CredentialMapper.isJwtEncoded(raw) || CredentialMapper.isSdJwtEncoded(raw)) {
+export function isHex(input: string) {
+  return input.match(/^([0-9A-Fa-f])+$/g) !== null
+}
+
+export function parseRawDocument(raw: string): OriginalVerifiableCredential | OriginalVerifiablePresentation {
+  if (isHex(raw) || ObjectUtils.isBase64(raw)) {
+    // mso_mdoc
+    return raw
+  } else if (CredentialMapper.isJwtEncoded(raw) || CredentialMapper.isSdJwtEncoded(raw)) {
     return raw
   }
   try {
@@ -48,6 +63,8 @@ function determineCredentialDocumentFormat(documentFormat: DocumentFormat): Cred
       return CredentialDocumentFormat.JWT
     case DocumentFormat.SD_JWT_VC:
       return CredentialDocumentFormat.SD_JWT
+    case DocumentFormat.MSO_MDOC:
+      return CredentialDocumentFormat.MSO_MDOC
     default:
       throw new Error(`Not supported document format: ${documentFormat}`)
   }
@@ -77,6 +94,13 @@ function getValidFrom(uniformDocument: IVerifiableCredential | IVerifiablePresen
   return undefined
 }
 
+const safeStringify = (object: any): string => {
+  if (typeof object === 'string') {
+    return object
+  }
+  return JSON.stringify(object)
+}
+
 export const nonPersistedDigitalCredentialEntityFromAddArgs = (addCredentialArgs: AddCredentialArgs): NonPersistedDigitalCredential => {
   const documentType: DocumentType = determineDocumentType(addCredentialArgs.rawDocument)
   const documentFormat: DocumentFormat = CredentialMapper.detectDocumentType(addCredentialArgs.rawDocument)
@@ -91,14 +115,16 @@ export const nonPersistedDigitalCredentialEntityFromAddArgs = (addCredentialArgs
   const validFrom: Date | undefined = getValidFrom(uniformDocument)
   const validUntil: Date | undefined = getValidUntil(uniformDocument)
   const hash = computeEntryHash(addCredentialArgs.rawDocument)
+  const regulationType = addCredentialArgs.regulationType ?? RegulationType.NON_REGULATED
   return {
     ...addCredentialArgs,
+    regulationType,
     documentType,
     documentFormat: determineCredentialDocumentFormat(documentFormat),
     createdAt: new Date(),
     credentialId: uniformDocument.id ?? hash,
     hash,
-    uniformDocument: JSON.stringify(uniformDocument),
+    uniformDocument: safeStringify(uniformDocument),
     validFrom,
     ...(validUntil && { validUntil }),
     lastUpdatedAt: new Date(),

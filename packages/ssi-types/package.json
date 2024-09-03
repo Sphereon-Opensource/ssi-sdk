@@ -12,7 +12,8 @@
     "@sd-jwt/decode": "^0.6.1",
     "debug": "^4.3.5",
     "events": "^3.3.0",
-    "jwt-decode": "^3.1.2"
+    "jwt-decode": "^3.1.2",
+    "@sphereon/kmp-mdl-mdoc": "0.2.0-SNAPSHOT.22"
   },
   "devDependencies": {
     "@types/jest": "^27.5.2",

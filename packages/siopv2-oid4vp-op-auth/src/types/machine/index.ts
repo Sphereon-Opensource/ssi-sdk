@@ -1,14 +1,14 @@
 import { VerifiedAuthorizationRequest } from '@sphereon/did-auth-siop'
-import { ManagedIdentifierOpts } from '@sphereon/ssi-sdk-ext.identifier-resolution'
+import { ManagedIdentifierOptsOrResult } from '@sphereon/ssi-sdk-ext.identifier-resolution'
 import { DidAuthConfig, Party } from '@sphereon/ssi-sdk.data-store'
-import { OriginalVerifiableCredential } from '@sphereon/ssi-types'
 import { BaseActionObject, Interpreter, ResolveTypegenMeta, ServiceMap, State, StateMachine, TypegenDisabled } from 'xstate'
 import { ErrorDetails } from '../error'
 import { SelectableCredentialsMap, Siopv2AuthorizationRequestData, Siopv2AuthorizationResponseData } from '../siop-service'
+import { UniqueDigitalCredential } from '@sphereon/ssi-sdk.credential-store'
 
 export type Siopv2MachineContext = {
   url: string
-  idOpts?: ManagedIdentifierOpts
+  idOpts?: ManagedIdentifierOptsOrResult
   didAuthConfig?: Omit<DidAuthConfig, 'identifier'>
   authorizationRequestData?: Siopv2AuthorizationRequestData
   authorizationResponseData?: Siopv2AuthorizationResponseData
@@ -17,7 +17,7 @@ export type Siopv2MachineContext = {
   hasContactConsent: boolean
   contactAlias: string
   selectableCredentialsMap?: SelectableCredentialsMap
-  selectedCredentials: Array<OriginalVerifiableCredential>
+  selectedCredentials: Array<UniqueDigitalCredential>
   error?: ErrorDetails
 }
 
@@ -75,7 +75,7 @@ export type Siopv2StateMachine = StateMachine<
 
 export type CreateSiopv2MachineOpts = {
   url: string | URL
-  idOpts?: ManagedIdentifierOpts
+  idOpts?: ManagedIdentifierOptsOrResult
   machineId?: string
 }
 
@@ -134,7 +134,7 @@ export type ContactAliasEvent = { type: Siopv2MachineEvents.SET_CONTACT_ALIAS; d
 export type CreateContactEvent = { type: Siopv2MachineEvents.CREATE_CONTACT; data: Party }
 export type SelectCredentialsEvent = {
   type: Siopv2MachineEvents.SET_SELECTED_CREDENTIALS
-  data: Array<OriginalVerifiableCredential>
+  data: Array<UniqueDigitalCredential>
 }
 
 export type Siopv2Machine = {

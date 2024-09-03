@@ -15,8 +15,8 @@
     "generate-plugin-schema": "ts-node ../../packages/dev/bin/sphereon.js dev generate-plugin-schema"
   },
   "dependencies": {
-    "@sphereon/pex": "^4.0.1",
-    "@sphereon/pex-models": "^2.2.4",
+    "@sphereon/pex": "^4.1.1-unstable.0",
+    "@sphereon/pex-models": "^2.3.1",
     "@sphereon/ssi-sdk.data-store": "workspace:*",
     "cross-fetch": "^3.1.8",
     "debug": "^4.3.5",

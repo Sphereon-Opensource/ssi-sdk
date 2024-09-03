@@ -1,5 +1,6 @@
 import { IssuerMetadata, CredentialIssuerMetadataOpts } from '@sphereon/oid4vci-common'
-import { IDIDOptions } from '@sphereon/ssi-sdk-ext.did-utils'
+import { IDIDOptions, ResolveOpts } from '@sphereon/ssi-sdk-ext.did-utils'
+import { ManagedIdentifierOptsOrResult } from '@sphereon/ssi-sdk-ext.identifier-resolution'
 import { IKeyValueStore, IValueData } from '@sphereon/ssi-sdk.kv-store-temp'
 import { IPluginMethodMap } from '@veramo/core'
 
@@ -41,7 +42,12 @@ export interface IIssuerInstanceOptions extends IMetadataOptions {
 }
 
 export interface IIssuerOptions {
-  didOpts: IDIDOptions
+  idOpts?: ManagedIdentifierOptsOrResult
+  resolveOpts?: ResolveOpts
+  /**
+   * @deprecated use idOpts which is more capable and supports x5c and jwks next to dids
+   */
+  didOpts?: IDIDOptions
   userPinRequired?: boolean
   cNonceExpiresIn?: number
 }

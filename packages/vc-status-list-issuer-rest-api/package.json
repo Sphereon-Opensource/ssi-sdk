@@ -13,8 +13,8 @@
   },
   "dependencies": {
     "@sphereon/ssi-express-support": "workspace:*",
-    "@sphereon/ssi-sdk-ext.did-utils": "0.24.1-next.96",
-    "@sphereon/ssi-sdk-ext.identifier-resolution": "0.24.1-next.96",
+    "@sphereon/ssi-sdk-ext.did-utils": "0.24.1-next.110",
+    "@sphereon/ssi-sdk-ext.identifier-resolution": "0.24.1-next.110",
     "@sphereon/ssi-sdk.core": "workspace:*",
     "@sphereon/ssi-sdk.data-store": "workspace:*",
     "@sphereon/ssi-sdk.vc-status-list": "workspace:*",
@@ -31,8 +31,8 @@
   },
   "devDependencies": {
     "@sphereon/did-uni-client": "^0.6.3",
-    "@sphereon/ssi-sdk-ext.did-provider-jwk": "0.24.1-next.96",
-    "@sphereon/ssi-sdk-ext.did-resolver-jwk": "0.24.1-next.96",
+    "@sphereon/ssi-sdk-ext.did-provider-jwk": "0.24.1-next.110",
+    "@sphereon/ssi-sdk-ext.did-resolver-jwk": "0.24.1-next.110",
     "@sphereon/ssi-sdk.agent-config": "workspace:*",
     "@sphereon/ssi-sdk.data-store": "workspace:*",
     "@sphereon/ssi-sdk.vc-handler-ld-local": "workspace:*",

@@ -1,10 +1,9 @@
 import { CredentialRequest, IssuerMetadata, Jwt, JwtVerifyResult, OID4VCICredentialFormat } from '@sphereon/oid4vci-common'
 import { CredentialDataSupplier, CredentialIssuanceInput, CredentialSignerCallback, VcIssuer, VcIssuerBuilder } from '@sphereon/oid4vci-issuer'
 import { getAgentResolver, IDIDOptions } from '@sphereon/ssi-sdk-ext.did-utils'
-import { getManagedIdentifier, legacyKeyRefsToIdentifierOpts, ManagedIdentifierOpts } from '@sphereon/ssi-sdk-ext.identifier-resolution'
+import { legacyKeyRefsToIdentifierOpts, ManagedIdentifierOptsOrResult } from '@sphereon/ssi-sdk-ext.identifier-resolution'
 import { ICredential, W3CVerifiableCredential } from '@sphereon/ssi-types'
-import { DIDDocument, ProofFormat } from '@veramo/core'
-import { CredentialPayload } from '@veramo/core/src/types/vc-data-model'
+import { CredentialPayload, DIDDocument, ProofFormat } from '@veramo/core'
 import { bytesToBase64 } from '@veramo/utils'
 import { createJWT, decodeJWT, JWTVerifyOptions, verifyJWT } from 'did-jwt'
 import { Resolvable } from 'did-resolver'
@@ -53,7 +52,7 @@ export async function getAccessTokenKeyRef(
     /**
      * Uniform identifier options
      */
-    idOpts?: ManagedIdentifierOpts
+    idOpts?: ManagedIdentifierOptsOrResult
     /**
      * @deprecated
      */
@@ -69,9 +68,8 @@ export async function getAccessTokenKeyRef(
   },
   context: IRequiredContext,
 ) {
-  let idOpts: ManagedIdentifierOpts
-  idOpts = legacyKeyRefsToIdentifierOpts(opts)
-  return await context.agent.identifierManagedGet(idOpts)
+  let identifier = legacyKeyRefsToIdentifierOpts(opts)
+  return await context.agent.identifierManagedLazyResult(identifier)
 }
 
 export async function getAccessTokenSignerCallback(
@@ -79,7 +77,7 @@ export async function getAccessTokenSignerCallback(
     /**
      * Uniform identifier options
      */
-    idOpts?: ManagedIdentifierOpts
+    idOpts?: ManagedIdentifierOptsOrResult
     /**
      * @deprecated
      */
@@ -98,6 +96,7 @@ export async function getAccessTokenSignerCallback(
   const signer = async (data: string | Uint8Array) => {
     let dataString, encoding: 'base64' | undefined
 
+    const resolution = await legacyKeyRefsToIdentifierOpts(opts)
     const keyRef = resolution.kmsKeyRef
     if (!keyRef) {
       throw Error('Cannot sign access tokens without a key ref')
@@ -121,12 +120,11 @@ export async function getAccessTokenSignerCallback(
     return result
   }
 
-  const resolution = await context.agent.identifierManagedGet(legacyKeyRefsToIdentifierOpts(opts))
   return accessTokenSignerCallback
 }
 
 export async function getCredentialSignerCallback(
-  idOpts: ManagedIdentifierOpts & {
+  idOpts: ManagedIdentifierOptsOrResult & {
     crypto?: Crypto
   },
   context: IRequiredContext,
@@ -141,6 +139,7 @@ export async function getCredentialSignerCallback(
     const credential = args.credential as ICredential // TODO: SDJWT
     let proofFormat: ProofFormat
 
+    const resolution = await context.agent.identifierManagedLazyResult(idOpts)
     proofFormat = format?.includes('ld') ? 'lds' : 'jwt'
     if (!credential.issuer) {
       credential.issuer = { id: resolution.issuer ?? resolution.kmsKeyRef }
@@ -166,8 +165,6 @@ export async function getCredentialSignerCallback(
     })
     return (proofFormat === 'jwt' && 'jwt' in result.proof ? result.proof.jwt : result) as W3CVerifiableCredential
   }
-
-  const resolution = await getManagedIdentifier(idOpts, context)
 
   return issueVCCallback
 }

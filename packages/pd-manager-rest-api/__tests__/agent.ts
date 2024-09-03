@@ -4,7 +4,7 @@ import { IRequiredPlugins } from '../src'
 import { DB_CONNECTION_NAME, sqliteConfig } from './database'
 import { DataSources } from '@sphereon/ssi-sdk.agent-config'
 import { PDManager } from '@sphereon/ssi-sdk.pd-manager'
-import { PDStore } from '@sphereon/ssi-sdk.data-store/dist/pd/PDStore'
+import { PDStore } from '@sphereon/ssi-sdk.data-store'
 
 const dbConnection = DataSources.singleInstance().addConfig(DB_CONNECTION_NAME, sqliteConfig).getDbConnection(DB_CONNECTION_NAME)
 

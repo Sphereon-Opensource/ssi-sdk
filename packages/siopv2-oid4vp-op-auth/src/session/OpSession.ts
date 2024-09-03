@@ -1,20 +1,20 @@
 import {
-  CheckLinkedDomain,
   PresentationDefinitionWithLocation,
   PresentationExchangeResponseOpts,
-  ResolveOpts,
   URI,
   Verification,
-  VerificationMode,
+  // VerificationMode,
   VerifiedAuthorizationRequest,
 } from '@sphereon/did-auth-siop'
+import { PresentationVerificationResult } from '@sphereon/did-auth-siop'
 import { getAgentDIDMethods, getAgentResolver } from '@sphereon/ssi-sdk-ext.did-utils'
-import { CredentialMapper, parseDid } from '@sphereon/ssi-types'
-import { IIdentifier, TKeyType } from '@veramo/core'
+import { CompactSdJwtVc, W3CVerifiablePresentation, CredentialMapper, PresentationSubmission, parseDid } from '@sphereon/ssi-types'
+import { IIdentifier, IVerifyResult, TKeyType } from '@veramo/core'
 import Debug from 'debug'
 import { IOPOptions, IOpSessionArgs, IOpSessionGetOID4VPArgs, IOpsSendSiopAuthorizationResponseArgs, IRequiredContext } from '../types'
 import { createOP } from './functions'
 import { OID4VP } from './OID4VP'
+import { ResolveOpts } from '@sphereon/did-auth-siop-adapter'
 
 const debug = Debug(`sphereon:sdk:siop:op-session`)
 
@@ -204,12 +204,38 @@ export class OpSession {
   }
 
   public async getOID4VP(args: IOpSessionGetOID4VPArgs): Promise<OID4VP> {
-    return await OID4VP.init(this, args.allDIDs ?? [], args.hasher)
+    return await OID4VP.init(this, args.allIdentifiers ?? [], args.hasher)
   }
 
-  /*private async getMergedRequestPayload(): Promise<RequestObjectPayload> {
-            return await (await this.getAuthorizationRequest()).authorizationRequest.mergedPayloads()
-          }*/
+  private createPresentationVerificationCallback(context: IRequiredContext) {
+    async function presentationVerificationCallback(
+      args: W3CVerifiablePresentation | CompactSdJwtVc,
+      presentationSubmission: PresentationSubmission,
+    ): Promise<PresentationVerificationResult> {
+      let result: IVerifyResult
+      if (CredentialMapper.isSdJwtEncoded(args)) {
+        try {
+          const sdJwtResult = await context.agent.verifySdJwtPresentation({ presentation: args })
+          result = {
+            verified: 'header' in sdJwtResult,
+            error: 'header' in sdJwtResult ? undefined : { message: 'could not verify SD JWT presentation' },
+          }
+        } catch (error: any) {
+          result = {
+            verified: false,
+            error: { message: error.message },
+          }
+        }
+      } else {
+        // @ts-ignore
+        result = await context.agent.verifyPresentation({ presentation: args })
+      }
+      return result
+    }
+
+    return presentationVerificationCallback
+  }
+
   public async sendAuthorizationResponse(args: IOpsSendSiopAuthorizationResponseArgs): Promise<Response> {
     const resolveOpts: ResolveOpts = this.options.resolveOpts ?? {
       resolver: getAgentResolver(this.context, {
@@ -221,12 +247,13 @@ export class OpSession {
     if (!resolveOpts.subjectSyntaxTypesSupported || resolveOpts.subjectSyntaxTypesSupported.length === 0) {
       resolveOpts.subjectSyntaxTypesSupported = await this.getSupportedDIDMethods(true)
     }
+    //todo: populate with the right verification params. In did-auth-siop we don't have any test that actually passes this parameter
     const verification: Verification = {
-      mode: VerificationMode.INTERNAL,
-      checkLinkedDomain: CheckLinkedDomain.IF_PRESENT,
-      resolveOpts,
+      presentationVerificationCallback: this.createPresentationVerificationCallback(this.context),
+      // mode: VerificationMode.INTERNAL,
+      // checkLinkedDomain: CheckLinkedDomain.IF_PRESENT,
+      // resolveOpts,
     }
-
     const request = await this.getAuthorizationRequest()
     const hasDefinitions = await this.hasPresentationDefinitions()
     if (hasDefinitions) {
@@ -259,6 +286,7 @@ export class OpSession {
       context: this.context,
     })
 
+    //TODO change this to use the new functionalities by identifier-resolver and get the jwkIssuer for the responseOpts
     let issuer = args.responseSignerOpts.issuer
     const responseOpts = {
       verification,

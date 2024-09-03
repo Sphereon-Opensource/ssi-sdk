@@ -17,7 +17,7 @@ import {
   TClaimsColumns,
   UniqueDigitalCredential,
 } from '../index'
-import { AbstractDigitalCredentialStore, DigitalCredential, UpdateCredentialStateArgs } from '@sphereon/ssi-sdk.data-store'
+import { AbstractDigitalCredentialStore, DigitalCredential, parseRawDocument, UpdateCredentialStateArgs } from '@sphereon/ssi-sdk.data-store'
 import { IVerifiableCredential } from '@sphereon/ssi-types'
 // Exposing the methods here for any REST implementation
 export const credentialStoreMethods: Array<string> = [
@@ -219,10 +219,7 @@ export class CredentialStore implements IAgentPlugin {
   }
 
   private secureParse<Type>(original: string): Type {
-    if (original.includes('~')) {
-      return original as Type
-    }
-    return JSON.parse(original)
+    return parseRawDocument(original) as Type
   }
 
   private toUniqueCredentials(credentials: Array<DigitalCredential>): Array<UniqueDigitalCredential> {

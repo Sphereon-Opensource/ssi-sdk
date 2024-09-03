@@ -1,3 +1,4 @@
+import { CredentialCorrelationType, CredentialRole, DigitalCredential } from '@sphereon/ssi-sdk.credential-store'
 import { CredentialMapper, parseDid } from '@sphereon/ssi-types'
 import {
   DomainLinkageCredential,
@@ -13,7 +14,7 @@ import { Service } from 'did-resolver/lib/resolver'
 import { Connection } from 'typeorm'
 import { v4 as uuidv4 } from 'uuid'
 import { createCredentialEntity, DidConfigurationResourceEntity, didConfigurationResourceFrom } from '../entities/DidConfigurationResourceEntity'
-import { CredentialCorrelationType, CredentialRole, DigitalCredential } from '@sphereon/ssi-sdk.credential-store'
+import { schema } from '../index'
 import {
   IAddLinkedDomainsServiceArgs,
   IGetDidConfigurationResourceArgs,
@@ -26,7 +27,7 @@ import {
   IWellKnownDidIssuerOptionsArgs,
   RequiredContext,
 } from '../types/IWellKnownDidIssuer'
-import { schema } from '../index'
+import { RegulationType } from '@sphereon/ssi-sdk.data-store'
 
 /**
  * {@inheritDoc IWellKnownDidIssuer}
@@ -227,6 +228,9 @@ export class WellKnownDidIssuer implements IAgentPlugin {
       credential: {
         rawDocument: JSON.stringify(vc),
         credentialRole: CredentialRole.ISSUER,
+        regulationType: RegulationType.NON_REGULATED, // FIXME funke
+        kmsKeyRef: 'FIXME', // FIXME funke
+        identifierMethod: 'did',
         issuerCorrelationId: CredentialMapper.issuerCorrelationIdFromIssuerType(vc.issuer),
         issuerCorrelationType: CredentialCorrelationType.DID,
         subjectCorrelationId: CredentialMapper.issuerCorrelationIdFromIssuerType(vc.issuer), // FIXME get separate did for subject

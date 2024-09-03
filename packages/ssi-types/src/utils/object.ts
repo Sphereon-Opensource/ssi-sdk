@@ -1,3 +1,5 @@
+const BASE64_REGEX = /^[-A-Za-z0-9+_/]*={0,3}$/g
+
 export class ObjectUtils {
   public static asArray<T>(value: T): T[] {
     return Array.isArray(value) ? value : [value]
@@ -15,5 +17,12 @@ export class ObjectUtils {
 
   public static isString(value: unknown): value is string {
     return typeof value === 'string' || Object.prototype.toString.call(value) === '[object String]'
+  }
+
+  public static isBase64(value: unknown): boolean {
+    if (!ObjectUtils.isString(value)) {
+      return false
+    }
+    return value.match(BASE64_REGEX) !== null
   }
 }

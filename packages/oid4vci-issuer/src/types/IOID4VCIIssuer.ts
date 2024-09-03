@@ -12,8 +12,7 @@ import {
 } from '@sphereon/oid4vci-common'
 import { CredentialDataSupplier } from '@sphereon/oid4vci-issuer'
 import { IDIDOptions, ResolveOpts } from '@sphereon/ssi-sdk-ext.did-utils'
-import { IIdentifierResolution } from '@sphereon/ssi-sdk-ext.identifier-resolution'
-import { ManagedIdentifierOpts } from '@sphereon/ssi-sdk-ext.identifier-resolution/dist/types'
+import { IIdentifierResolution, ManagedIdentifierOptsOrResult } from '@sphereon/ssi-sdk-ext.identifier-resolution'
 import { IOID4VCIStore } from '@sphereon/ssi-sdk.oid4vci-issuer-store'
 import { ICredential } from '@sphereon/ssi-types/dist'
 import { IAgentContext, ICredentialIssuer, IDIDManager, IKeyManager, IPluginMethodMap, IResolver } from '@veramo/core'
@@ -35,7 +34,7 @@ export interface IOID4VCIIssuerOpts {
   returnSessions?: boolean
 }
 
-export interface IIssuerDefaultOpts extends IIssuerOptions {}
+// export interface IIssuerDefaultOpts extends IIssuerOptions {}
 
 export interface ICreateOfferArgs extends IIssuerInstanceArgs {
   grants?: Grant
@@ -76,7 +75,7 @@ export interface IIssuerInstanceOptions extends IMetadataOptions {
 }
 
 export interface IIssuerOptions {
-  idOpts?: ManagedIdentifierOpts
+  idOpts?: ManagedIdentifierOptsOrResult
   resolveOpts?: ResolveOpts
   /**
    * @deprecated: use idOpts

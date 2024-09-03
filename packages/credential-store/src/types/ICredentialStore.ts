@@ -11,6 +11,7 @@ import {
   ICredential,
   IPresentation,
   IVerifiableCredential,
+  IVerifiablePresentation,
   OriginalVerifiableCredential,
   OriginalVerifiablePresentation,
 } from '@sphereon/ssi-types'
@@ -133,7 +134,7 @@ export interface UniqueDigitalCredential {
   originalCredential?: ICredential
   originalPresentation?: IPresentation
   uniformVerifiableCredential?: IVerifiableCredential
-  uniformVerifiablePresentation?: IVerifiableCredential
+  uniformVerifiablePresentation?: IVerifiablePresentation
 }
 
 export type OptionalUniqueDigitalCredential = UniqueDigitalCredential | undefined

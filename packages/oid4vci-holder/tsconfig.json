@@ -33,6 +33,9 @@
       "path": "../sd-jwt"
     },
     {
+      "path": "../mdl-mdoc"
+    },
+    {
       "path": "../xstate-persistence"
     }
   ]

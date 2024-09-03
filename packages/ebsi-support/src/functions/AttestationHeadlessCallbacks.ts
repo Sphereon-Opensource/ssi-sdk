@@ -11,8 +11,7 @@ import {
   PartyTypeType,
 } from '@sphereon/ssi-sdk.data-store'
 import { OID4VCIMachine, OID4VCIMachineEvents, OID4VCIMachineInterpreter, OID4VCIMachineState } from '@sphereon/ssi-sdk.oid4vci-holder'
-import { Siopv2MachineInterpreter, Siopv2MachineState } from '@sphereon/ssi-sdk.siopv2-oid4vp-op-auth'
-import { Siopv2OID4VPLinkHandler } from '@sphereon/ssi-sdk.siopv2-oid4vp-op-auth'
+import { Siopv2MachineInterpreter, Siopv2MachineState, Siopv2OID4VPLinkHandler } from '@sphereon/ssi-sdk.siopv2-oid4vp-op-auth'
 import fetch from 'cross-fetch'
 import { logger } from '../index'
 import { IRequiredContext } from '../types/IEbsiSupport'
@@ -226,8 +225,8 @@ export const authorizationCodeUrlCallback = (
       console.log(`onOpenAuthorizationUrl after openUrl: ${url}`)
       const kid = authReqResult.authKey.meta?.jwkThumbprint
         ? `${authReqResult.identifier.did}#${authReqResult.authKey.meta.jwkThumbprint}`
-        : authReqResult.authKey.kid
-      await vpLinkHandler.handle(openidUri, { idOpts: { identifier: authReqResult.identifier, kmsKeyRef: kid } })
+        : authReqResult.identifier.kid
+      await vpLinkHandler.handle(openidUri, { idOpts: { ...authReqResult.identifier, kmsKeyRef: kid } })
     }
     await onOpenAuthorizationUrl(url)
   }

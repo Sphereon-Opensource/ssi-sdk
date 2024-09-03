@@ -10,7 +10,6 @@ export {
   encodeJsonAsURI,
   AuthorizationResponsePayload,
   AuthorizationRequestPayload,
-  CheckLinkedDomain,
   URI,
   AuthorizationRequestState,
   RequestObjectPayload,
@@ -20,9 +19,10 @@ export {
   OP,
   OPBuilder,
   SupportedVersion,
-  SigningAlgo,
   PresentationDefinitionWithLocation,
   PresentationVerificationResult,
   PresentationVerificationCallback,
   VPTokenLocation,
 } from '@sphereon/did-auth-siop'
+export { SigningAlgo } from '@sphereon/oid4vc-common'
+export { CheckLinkedDomain } from '@sphereon/did-auth-siop-adapter'
