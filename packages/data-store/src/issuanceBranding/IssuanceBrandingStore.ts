@@ -8,7 +8,7 @@ import {
   issuerBrandingEntityFrom,
   issuerBrandingFrom,
   issuerLocaleBrandingEntityFrom,
-  localeBrandingFrom
+  localeBrandingFrom,
 } from '../utils/issuanceBranding/MappingUtils'
 import { BackgroundAttributesEntity } from '../entities/issuanceBranding/BackgroundAttributesEntity'
 import { ImageAttributesEntity } from '../entities/issuanceBranding/ImageAttributesEntity'
@@ -277,7 +277,8 @@ export class IssuanceBrandingStore extends AbstractIssuanceBrandingStore {
     })
 
     if (result) {
-      return Promise.reject(Error(`Issuer branding already present for issuer with correlation id: ${issuerCorrelationId}`))
+      return issuerBrandingFrom(result)
+      //return Promise.reject(Error(`Issuer branding already present for issuer with correlation id: ${issuerCorrelationId}`))
     }
 
     if (await this.hasDuplicateLocales(localeBranding)) {
