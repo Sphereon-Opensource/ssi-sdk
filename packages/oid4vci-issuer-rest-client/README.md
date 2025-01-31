@@ -51,6 +51,65 @@ const request: IVCIClientCreateOfferUriRequestArgs = {
 const result: IVCIClientCreateOfferUriResponse = await agent.vciClientCreateOfferUri(request)
 ```
 
+### Use the VDX external identity API to retrieve custom user attributes to issue credentials
+
+```typescript
+import { IAgentContext } from '@veramo/core'
+import { IOID4VCIClientCreateOfferUriResponse } from '@sphereon/ssi-sdk.oid4vci-issuer-rest-client'
+import fetch from 'cross-fetch';
+import jwtDecode from 'jwt-decode';
+
+const getUserCustomAttributesFromVDX = async (baseUrl: string, realmId: string, userId: string): Promise<Record<string, any> | undefined> => {
+    const url = `${baseUrl}/${realmId}/users/${userId}`;
+
+    // Fetch the custom attributes of a user
+    return fetch(url)
+        .then(async (response) => {
+            if (response.status >= 400) {
+                return Promise.reject(`Error: Received status code ${response.status}`)
+            }
+
+            const data = await response.json()
+
+            return data.custom?.attributes
+        })
+        .catch((error) => Promise.reject(`Failed to fetch user attributes. Error: ${error.message}`))
+}
+
+const parseKeycloakAccessToken = async (accessToken: string): Promise<{ realmId: string, userId: string }> => {
+    // Decode the access token
+    const decoded = jwtDecode(accessToken)
+
+    // Extract user ID from the 'sub' claim
+    const userId = decoded.sub
+
+    // Extract realm ID from the 'iss' claim (e.g., "https://example.com/auth/realms/my-realm")
+    const realmId = decoded.iss.split('/').pop()
+
+    return { realmId, userId }
+}
+
+const createCredentialOfferUri = async (baseUrl: string, accessToken: string, context: IAgentContext): Promise<IOID4VCIClientCreateOfferUriResponse> => {
+    // Parse the access token to get the realm id and user id
+    const parsedToken = await parseKeycloakAccessToken(accessToken)
+    // Retrieve the custom attributes of a user to be used as credential input
+    const credentialDataSupplierInput = await getUserCustomAttributesFromVDX(baseUrl, parsedToken.realmId, parsedToken.userId)
+
+    // Create credential offer uri with credential input
+    return context.agent.oid4vciClientCreateOfferUri({ credentialDataSupplierInput: {
+        salutation: credentialDataSupplierInput.salutation,
+        firstName: credentialDataSupplierInput.firstName,
+        lastName: credentialDataSupplierInput.lastName,
+        phoneNumber: credentialDataSupplierInput.phoneNumber,
+        employeeIdNumber: credentialDataSupplierInput.employeeIdNumber,
+        emailAddress: credentialDataSupplierInput.emailAddress,
+        jobTitle: credentialDataSupplierInput.jobTitle,
+        pcc: credentialDataSupplierInput.pcc,
+        iataCode: credentialDataSupplierInput.iataCode,
+    }})
+}
+```
+
 ### Installation
 
 ```shell
